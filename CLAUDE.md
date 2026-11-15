@@ -75,7 +75,8 @@ What belongs where, rather than an inventory; a class is named only when it carr
 ### Data Flow
 
 Microphone → `AudioRecord` (IO coroutine in `TunerViewModel`) → `PitchDetector` (YIN) → `FrequencySmoothing` (EMA) →
-`NoteConfirmationGate` (3-frame debounce) → `TunerState` `StateFlow` → `TunerScreen`
+`NoteConfirmationGate` (3-frame debounce) → `LastNoteHold` (keeps the last note on screen, flagged not live, when the
+sound fades) → `TunerState` `StateFlow` → `TunerScreen` (needle gauge; green border while within `IN_TUNE_CENTS`)
 
 Settings changes are debounced 1 second before being written to DataStore.
 

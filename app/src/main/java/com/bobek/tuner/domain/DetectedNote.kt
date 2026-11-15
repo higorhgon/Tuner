@@ -66,6 +66,8 @@ data class DetectedNote(
     }
 }
 
-fun DetectedNote.displayName(solfegeNotation: Boolean): String =
+fun DetectedNote.displayName(solfegeNotation: Boolean): String = noteDisplayName(name, solfegeNotation)
+
+fun noteDisplayName(name: String, solfegeNotation: Boolean): String =
     if (solfegeNotation) SOLFEGE_NAMES[name] ?: name
     else name

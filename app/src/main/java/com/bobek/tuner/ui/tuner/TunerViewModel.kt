@@ -42,12 +42,22 @@ import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlin.math.log10
 import kotlin.math.sqrt
 import kotlin.time.Duration.Companion.seconds
 
 sealed class TunerState {
     object Idle : TunerState()
-    data class Listening(val note: DetectedNote?) : TunerState()
+    /**
+     * @param note the note on screen: the live note, or the last confirmed one while nothing is heard
+     * @param isLive true when [note] is being heard right now, false when it is held from earlier
+     * @param inputLevel microphone level, 0 (silence) to 1 (loud)
+     */
+    data class Listening(
+        val note: DetectedNote?,
+        val isLive: Boolean = note != null,
+        val inputLevel: Float = 0f
+    ) : TunerState()
 }
 
 interface ITunerViewModel {
@@ -135,16 +145,21 @@ class TunerViewModel @Inject constructor(
         val smoothing = FrequencySmoothing(FREQUENCY_SMOOTHING_ALPHA)
         val gate = NoteConfirmationGate(NOTE_CONFIRMATION_FRAMES)
         val onsetDetector = OnsetDetector(ONSET_ENERGY_RATIO, ONSET_MIN_RMS)
+        val hold = LastNoteHold()
         val buffer = FloatArray(ANALYSIS_SIZE)
 
         try {
             while (currentCoroutineContext().isActive) {
                 val read = record.read(buffer, 0, ANALYSIS_SIZE, AudioRecord.READ_BLOCKING)
-                if (read > 0 && !onsetDetector.isOnset(buffer)) {
+                if (read <= 0) continue
+                val level = inputLevel(rootMeanSquare(buffer))
+                if (onsetDetector.isOnset(buffer)) {
+                    tunerStateFlow.value = hold.withLevel(level)
+                } else {
                     val frequency = PitchDetector.detect(buffer, SAMPLE_RATE)
                     val note = smoothing.process(frequency)
                         ?.let { DetectedNote.fromFrequency(it, referencePitchFlow.value.toDouble()) }
-                    tunerStateFlow.value = TunerState.Listening(gate.process(note))
+                    tunerStateFlow.value = hold.process(gate.process(note), level)
                 }
             }
         } finally {
@@ -223,11 +238,40 @@ internal class OnsetDetector(private val energyRatio: Float, private val minRms:
         return onset
     }
 
-    private fun rootMeanSquare(buffer: FloatArray): Float {
-        var sumOfSquares = 0f
-        for (sample in buffer) sumOfSquares += sample * sample
-        return sqrt(sumOfSquares / buffer.size)
+}
+
+internal fun rootMeanSquare(buffer: FloatArray): Float {
+    var sumOfSquares = 0f
+    for (sample in buffer) sumOfSquares += sample * sample
+    return sqrt(sumOfSquares / buffer.size)
+}
+
+private const val INPUT_LEVEL_FLOOR_DB = -60f
+
+/** Maps an RMS amplitude to 0..1 on a dB scale from [INPUT_LEVEL_FLOOR_DB] to 0 dBFS. */
+internal fun inputLevel(rms: Float): Float {
+    if (rms <= 0f) return 0f
+    val db = 20f * log10(rms)
+    return ((db - INPUT_LEVEL_FLOOR_DB) / -INPUT_LEVEL_FLOOR_DB).coerceIn(0f, 1f)
+}
+
+/**
+ * Keeps the last confirmed note on screen when the sound fades, so the display does not go blank
+ * between plucks. The held note is flagged as not live.
+ */
+internal class LastNoteHold {
+
+    private var lastNote: DetectedNote? = null
+    private var isLive = false
+
+    fun process(confirmedNote: DetectedNote?, level: Float = 0f): TunerState.Listening {
+        if (confirmedNote != null) lastNote = confirmedNote
+        isLive = confirmedNote != null
+        return TunerState.Listening(lastNote, isLive, level)
     }
+
+    /** Same note and liveness as the previous frame, with a new input level. */
+    fun withLevel(level: Float): TunerState.Listening = TunerState.Listening(lastNote, isLive, level)
 }
 
 internal class FrequencySmoothing(private val alpha: Float) {

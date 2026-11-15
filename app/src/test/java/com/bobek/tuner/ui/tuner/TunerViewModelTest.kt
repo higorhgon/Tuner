@@ -327,3 +327,78 @@ class NoteConfirmationGateTest {
         return process(note)
     }
 }
+
+class LastNoteHoldTest {
+
+    private val noteA = DetectedNote(name = "A", octave = 4, frequency = 440f, cents = 0)
+    private val noteB = DetectedNote(name = "B", octave = 4, frequency = 493.88f, cents = 3)
+
+    @Test
+    fun noNoteYetShowsNothing() {
+        val state = LastNoteHold().process(null)
+        assertNull(state.note)
+        assertFalse(state.isLive)
+    }
+
+    @Test
+    fun confirmedNoteIsLive() {
+        val state = LastNoteHold().process(noteA, level = 0.5f)
+        assertEquals(noteA, state.note)
+        assertTrue(state.isLive)
+        assertEquals(0.5f, state.inputLevel)
+    }
+
+    @Test
+    fun lastNoteIsHeldWhenSoundStops() {
+        val hold = LastNoteHold()
+        hold.process(noteA)
+
+        val state = hold.process(null)
+
+        assertEquals(noteA, state.note)
+        assertFalse(state.isLive)
+    }
+
+    @Test
+    fun newNoteReplacesHeldNote() {
+        val hold = LastNoteHold()
+        hold.process(noteA)
+        hold.process(null)
+
+        val state = hold.process(noteB)
+
+        assertEquals(noteB, state.note)
+        assertTrue(state.isLive)
+    }
+
+    @Test
+    fun withLevelKeepsNoteAndLiveness() {
+        val hold = LastNoteHold()
+        hold.process(noteA)
+
+        val state = hold.withLevel(0.9f)
+
+        assertEquals(noteA, state.note)
+        assertTrue(state.isLive)
+        assertEquals(0.9f, state.inputLevel)
+    }
+}
+
+class InputLevelTest {
+
+    @Test
+    fun silenceIsZero() {
+        assertEquals(0f, inputLevel(0f))
+        assertEquals(0f, inputLevel(0.0001f))
+    }
+
+    @Test
+    fun fullScaleIsOne() {
+        assertEquals(1f, inputLevel(1f))
+    }
+
+    @Test
+    fun minus30DbIsHalf() {
+        assertEquals(0.5f, inputLevel(0.031622776f), 0.001f)
+    }
+}
