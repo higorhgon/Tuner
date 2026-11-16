@@ -28,6 +28,9 @@ import androidx.lifecycle.viewModelScope
 import com.bobek.tuner.domain.DEFAULT_REFERENCE_PITCH
 import com.bobek.tuner.domain.DetectedNote
 import com.bobek.tuner.domain.PitchDetector
+import com.bobek.tuner.domain.Tuning
+import com.bobek.tuner.domain.tuningForId
+import com.bobek.tuner.settings.PreferenceConstants
 import com.bobek.tuner.settings.SettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import jakarta.inject.Inject
@@ -42,6 +45,7 @@ import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 import kotlin.math.log10
 import kotlin.math.sqrt
 import kotlin.time.Duration.Companion.seconds
@@ -68,6 +72,17 @@ interface ITunerViewModel {
     fun getSolfegeNotationFlow(): StateFlow<Boolean>
     fun setSolfegeNotation(solfegeNotation: Boolean)
 
+    /** Selected instrument tuning, or null for the chromatic tuner. */
+    fun getTuningFlow(): StateFlow<Tuning?>
+    fun setTuning(tuning: Tuning?)
+
+    /** String the tuner is locked to, or null to pick the closest string automatically. */
+    fun getLockedStringFlow(): StateFlow<Int?>
+    fun toggleLockedString(stringIndex: Int)
+
+    /** Strings of the selected tuning that have been held in tune, since the tuning was selected. */
+    fun getTunedStringsFlow(): StateFlow<Set<Int>>
+
     @RequiresPermission(RECORD_AUDIO)
     fun startListening()
 
@@ -81,6 +96,8 @@ internal const val FREQUENCY_SMOOTHING_ALPHA = 0.7f
 internal const val NOTE_CONFIRMATION_FRAMES = 3
 internal const val ONSET_ENERGY_RATIO = 2.5f
 internal const val ONSET_MIN_RMS = 0.01f
+/** Consecutive in-tune frames (~93 ms each) before a string counts as tuned. */
+internal const val TUNED_STRING_FRAMES = 8
 
 private val SETTINGS_DEBOUNCE = 1.seconds
 
@@ -93,6 +110,9 @@ class TunerViewModel @Inject constructor(
     private val tunerStateFlow = MutableStateFlow<TunerState>(TunerState.Idle)
     private val referencePitchFlow = MutableStateFlow(DEFAULT_REFERENCE_PITCH)
     private val solfegeNotationFlow = MutableStateFlow(false)
+    private val tuningFlow = MutableStateFlow<Tuning?>(null)
+    private val lockedStringFlow = MutableStateFlow<Int?>(null)
+    private val tunedStringsFlow = MutableStateFlow<Set<Int>>(emptySet())
 
     private var recordingJob: Job? = null
 
@@ -106,11 +126,16 @@ class TunerViewModel @Inject constructor(
             solfegeNotationFlow.drop(1).debounce(SETTINGS_DEBOUNCE)
                 .collect { settingsRepository.setSolfegeNotation(it) }
         }
+        viewModelScope.launch {
+            tuningFlow.drop(1).debounce(SETTINGS_DEBOUNCE)
+                .collect { settingsRepository.setTuning(it?.id ?: PreferenceConstants.TUNING_VALUE_CHROMATIC) }
+        }
     }
 
     private suspend fun initFromSettings() {
         settingsRepository.getReferencePitch().firstOrNull()?.let { referencePitchFlow.value = it }
         settingsRepository.getSolfegeNotation().firstOrNull()?.let { solfegeNotationFlow.value = it }
+        settingsRepository.getTuning().firstOrNull()?.let { tuningFlow.value = tuningForId(it) }
     }
 
     override fun getTunerStateFlow() = tunerStateFlow
@@ -125,6 +150,23 @@ class TunerViewModel @Inject constructor(
     override fun setSolfegeNotation(solfegeNotation: Boolean) {
         solfegeNotationFlow.value = solfegeNotation
     }
+
+    override fun getTuningFlow(): StateFlow<Tuning?> = tuningFlow
+
+    override fun setTuning(tuning: Tuning?) {
+        if (tuning == tuningFlow.value) return
+        tuningFlow.value = tuning
+        lockedStringFlow.value = null
+        tunedStringsFlow.value = emptySet()
+    }
+
+    override fun getLockedStringFlow(): StateFlow<Int?> = lockedStringFlow
+
+    override fun toggleLockedString(stringIndex: Int) {
+        lockedStringFlow.value = if (lockedStringFlow.value == stringIndex) null else stringIndex
+    }
+
+    override fun getTunedStringsFlow(): StateFlow<Set<Int>> = tunedStringsFlow
 
     @RequiresPermission(RECORD_AUDIO)
     override fun startListening() {
@@ -143,23 +185,44 @@ class TunerViewModel @Inject constructor(
         record.startRecording()
 
         val smoothing = FrequencySmoothing(FREQUENCY_SMOOTHING_ALPHA)
-        val gate = NoteConfirmationGate(NOTE_CONFIRMATION_FRAMES)
         val onsetDetector = OnsetDetector(ONSET_ENERGY_RATIO, ONSET_MIN_RMS)
-        val hold = LastNoteHold()
         val buffer = FloatArray(ANALYSIS_SIZE)
+
+        // Recreated whenever the tuning or the locked string changes, so no note carries over from the old target.
+        var target = tuningFlow.value to lockedStringFlow.value
+        var gate = NoteConfirmationGate(NOTE_CONFIRMATION_FRAMES)
+        var hold = LastNoteHold()
+        var tunedTracker = TunedStringTracker(TUNED_STRING_FRAMES)
 
         try {
             while (currentCoroutineContext().isActive) {
                 val read = record.read(buffer, 0, ANALYSIS_SIZE, AudioRecord.READ_BLOCKING)
                 if (read <= 0) continue
+
+                val currentTarget = tuningFlow.value to lockedStringFlow.value
+                if (currentTarget != target) {
+                    target = currentTarget
+                    gate = NoteConfirmationGate(NOTE_CONFIRMATION_FRAMES)
+                    hold = LastNoteHold()
+                    tunedTracker = TunedStringTracker(TUNED_STRING_FRAMES)
+                }
+                val (tuning, lockedString) = currentTarget
+
                 val level = inputLevel(rootMeanSquare(buffer))
                 if (onsetDetector.isOnset(buffer)) {
                     tunerStateFlow.value = hold.withLevel(level)
                 } else {
                     val frequency = PitchDetector.detect(buffer, SAMPLE_RATE)
-                    val note = smoothing.process(frequency)
-                        ?.let { DetectedNote.fromFrequency(it, referencePitchFlow.value.toDouble()) }
-                    tunerStateFlow.value = hold.process(gate.process(note), level)
+                    val referencePitch = referencePitchFlow.value.toDouble()
+                    val note = smoothing.process(frequency)?.let {
+                        tuning?.noteFor(it, referencePitch, lockedString)
+                            ?: DetectedNote.fromFrequency(it, referencePitch)
+                    }
+                    val confirmed = gate.process(note)
+                    tunedTracker.process(confirmed)?.let { tuned ->
+                        if (tuningFlow.value == tuning) tunedStringsFlow.value += tuned
+                    }
+                    tunerStateFlow.value = hold.process(confirmed, level)
                 }
             }
         } finally {
@@ -203,8 +266,26 @@ class TunerViewModel @Inject constructor(
 class ComposeTunerViewModel(
     val tunerState: TunerState = TunerState.Listening(null),
     referencePitch: Int = DEFAULT_REFERENCE_PITCH,
-    solfegeNotation: Boolean = false
+    solfegeNotation: Boolean = false,
+    tuning: Tuning? = null,
+    lockedString: Int? = null,
+    tunedStrings: Set<Int> = emptySet()
 ) : ITunerViewModel {
+    private val tuningFlow = MutableStateFlow(tuning)
+    private val lockedStringFlow = MutableStateFlow(lockedString)
+    private val tunedStringsFlow = MutableStateFlow(tunedStrings)
+    override fun getTuningFlow(): StateFlow<Tuning?> = tuningFlow
+    override fun setTuning(tuning: Tuning?) {
+        tuningFlow.value = tuning
+    }
+
+    override fun getLockedStringFlow(): StateFlow<Int?> = lockedStringFlow
+    override fun toggleLockedString(stringIndex: Int) {
+        lockedStringFlow.value = if (lockedStringFlow.value == stringIndex) null else stringIndex
+    }
+
+    override fun getTunedStringsFlow(): StateFlow<Set<Int>> = tunedStringsFlow
+
     private val referencePitchFlow = MutableStateFlow(referencePitch)
     private val solfegeNotationFlow = MutableStateFlow(solfegeNotation)
     override fun getTunerStateFlow() = MutableStateFlow(tunerState)
@@ -253,6 +334,29 @@ internal fun inputLevel(rms: Float): Float {
     if (rms <= 0f) return 0f
     val db = 20f * log10(rms)
     return ((db - INPUT_LEVEL_FLOOR_DB) / -INPUT_LEVEL_FLOOR_DB).coerceIn(0f, 1f)
+}
+
+/** Reports a string as tuned once its note has stayed in tune for [frames] consecutive frames. */
+internal class TunedStringTracker(private val frames: Int, private val inTuneCents: Int = IN_TUNE_CENTS) {
+
+    private var stringIndex: Int? = null
+    private var count = 0
+
+    /** Returns the string index the frame it becomes tuned, null otherwise. */
+    fun process(note: DetectedNote?): Int? {
+        val index = note?.stringIndex
+        if (note == null || index == null || abs(note.cents) >= inTuneCents) {
+            stringIndex = null
+            count = 0
+            return null
+        }
+        if (index != stringIndex) {
+            stringIndex = index
+            count = 0
+        }
+        count++
+        return if (count == frames) index else null
+    }
 }
 
 /**

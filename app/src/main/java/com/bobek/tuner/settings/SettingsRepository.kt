@@ -30,4 +30,6 @@ interface SettingsRepository {
     suspend fun setSolfegeNotation(solfegeNotation: Boolean)
     fun getColorScheme(): Flow<String>
     suspend fun setColorScheme(colorScheme: String)
+    fun getTuning(): Flow<String>
+    suspend fun setTuning(tuning: String)
 }

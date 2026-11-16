@@ -61,6 +61,7 @@ import com.bobek.tuner.data.AppNightMode
 import com.bobek.tuner.ui.ComposeAppViewModel
 import com.bobek.tuner.ui.IAppViewModel
 import com.bobek.tuner.ui.theme.ColorSchemeChoice
+import com.bobek.tuner.ui.tunings.fullLabel
 import com.bobek.tuner.ui.tuner.ComposeTunerViewModel
 import com.bobek.tuner.ui.tuner.ITunerViewModel
 import com.bobek.tuner.ui.tuner.ReferencePitchDialog
@@ -74,6 +75,7 @@ fun SettingsScreen(
     viewModel: IAppViewModel = ComposeAppViewModel(),
     tunerViewModel: ITunerViewModel = ComposeTunerViewModel(),
     onBackClick: () -> Unit = {},
+    onTuningsClick: () -> Unit = {},
     onLicenseClick: () -> Unit = {},
     onThirdPartyLicensesClick: () -> Unit = {}
 ) {
@@ -83,6 +85,7 @@ fun SettingsScreen(
     val colorSchemeChoice = ColorSchemeChoice.forPreferenceValue(colorScheme)
     val referencePitch by tunerViewModel.getReferencePitchFlow().collectAsState()
     val solfegeNotation by tunerViewModel.getSolfegeNotationFlow().collectAsState()
+    val tuning by tunerViewModel.getTuningFlow().collectAsState()
 
     var showNightModeDialog by rememberSaveable { mutableStateOf(false) }
     var showColorSchemeDialog by rememberSaveable { mutableStateOf(false) }
@@ -115,6 +118,14 @@ fun SettingsScreen(
                     Icon(painter = painterResource(R.drawable.ic_tuner), contentDescription = null)
                 }
             ) {
+                ListItem(
+                    headlineContent = { Text(stringResource(R.string.tuning)) },
+                    supportingContent = {
+                        Text(tuning?.fullLabel() ?: stringResource(R.string.tuning_chromatic))
+                    },
+                    modifier = Modifier.clickable { onTuningsClick() }
+                )
+
                 ListItem(
                     headlineContent = { Text(stringResource(R.string.reference_pitch)) },
                     supportingContent = { Text(stringResource(R.string.reference_pitch_value, referencePitch)) },

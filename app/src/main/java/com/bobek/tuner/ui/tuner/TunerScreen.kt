@@ -30,6 +30,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -61,11 +62,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -80,6 +79,9 @@ import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.tooling.preview.PreviewScreenSizes
@@ -92,6 +94,11 @@ import com.bobek.tuner.R
 import com.bobek.tuner.domain.DetectedNote
 import com.bobek.tuner.domain.displayName
 import com.bobek.tuner.domain.noteDisplayName
+import com.bobek.tuner.domain.Pitch
+import com.bobek.tuner.domain.Tuning
+import com.bobek.tuner.domain.tuningForId
+import com.bobek.tuner.ui.tunings.label
+import com.bobek.tuner.ui.tunings.variantLabel
 import com.bobek.tuner.ui.theme.TunerTheme
 import kotlin.math.abs
 import kotlin.math.cos
@@ -118,14 +125,16 @@ private val InTuneBorderWidth = 6.dp
 @PreviewScreenSizes
 fun TunerScreen(
     @PreviewParameter(TunerScreenViewModelProvider::class) viewModel: ITunerViewModel,
-    onSettingsClick: () -> Unit = {}
+    onSettingsClick: () -> Unit = {},
+    onTuningsClick: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val state by viewModel.getTunerStateFlow().collectAsState()
     val referencePitch by viewModel.getReferencePitchFlow().collectAsState()
     val solfegeNotation by viewModel.getSolfegeNotationFlow().collectAsState()
-
-    var showReferencePitchDialog by rememberSaveable { mutableStateOf(false) }
+    val tuning by viewModel.getTuningFlow().collectAsState()
+    val lockedString by viewModel.getLockedStringFlow().collectAsState()
+    val tunedStrings by viewModel.getTunedStringsFlow().collectAsState()
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -164,8 +173,8 @@ fun TunerScreen(
             val header: @Composable () -> Unit = {
                 HeaderRow(
                     inputLevel = listening?.inputLevel ?: 0f,
-                    referencePitch = referencePitch,
-                    onReferencePitchClick = { showReferencePitchDialog = true },
+                    tuning = tuning,
+                    onTuningsClick = onTuningsClick,
                     onSettingsClick = onSettingsClick
                 )
             }
@@ -180,7 +189,30 @@ fun TunerScreen(
                         note = note,
                         isLive = isLive,
                         solfegeNotation = solfegeNotation,
+                        targetFrequency = note?.takeIf { tuning != null }
+                            ?.let { Pitch(it.name, it.octave).frequency(referencePitch.toDouble()) },
                         compact = compact
+                    )
+                }
+            }
+
+            val bottomRow: @Composable (Modifier) -> Unit = { modifier ->
+                val currentTuning = tuning
+                if (currentTuning != null) {
+                    StringRow(
+                        tuning = currentTuning,
+                        activeString = note?.stringIndex,
+                        lockedString = lockedString,
+                        tunedStrings = tunedStrings,
+                        solfegeNotation = solfegeNotation,
+                        onStringClick = viewModel::toggleLockedString,
+                        modifier = modifier
+                    )
+                } else {
+                    NoteRow(
+                        activeNote = note?.name,
+                        solfegeNotation = solfegeNotation,
+                        modifier = modifier
                     )
                 }
             }
@@ -213,11 +245,7 @@ fun TunerScreen(
                                 .fillMaxWidth()
                                 .padding(top = 8.dp)
                         )
-                        NoteRow(
-                            activeNote = note?.name,
-                            solfegeNotation = solfegeNotation,
-                            modifier = Modifier.padding(vertical = 8.dp)
-                        )
+                        bottomRow(Modifier.padding(vertical = 8.dp))
                     }
                 }
             } else {
@@ -236,30 +264,20 @@ fun TunerScreen(
                             .weight(1f)
                             .fillMaxWidth()
                     )
-                    NoteRow(
-                        activeNote = note?.name,
-                        solfegeNotation = solfegeNotation,
-                        modifier = Modifier.padding(top = 16.dp, bottom = 24.dp)
-                    )
+                    bottomRow(Modifier.padding(top = 16.dp, bottom = 24.dp))
                 }
             }
         }
     }
 
-    if (showReferencePitchDialog) {
-        ReferencePitchDialog(
-            viewModel = viewModel,
-            onDismiss = { showReferencePitchDialog = false }
-        )
-    }
 }
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
 private fun HeaderRow(
     inputLevel: Float,
-    referencePitch: Int,
-    onReferencePitchClick: () -> Unit,
+    tuning: Tuning?,
+    onTuningsClick: () -> Unit,
     onSettingsClick: () -> Unit
 ) {
     val settingsLabel = stringResource(R.string.settings)
@@ -277,10 +295,35 @@ private fun HeaderRow(
         )
         InputLevelBar(level = inputLevel, modifier = Modifier.padding(start = 4.dp))
         Spacer(modifier = Modifier.weight(1f))
-        TextButton(onClick = onReferencePitchClick) {
-            Text(
-                text = stringResource(R.string.reference_pitch_display, referencePitch),
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+        TextButton(
+            onClick = onTuningsClick,
+            modifier = Modifier.weight(3f, fill = false)
+        ) {
+            Column(horizontalAlignment = Alignment.End) {
+                if (tuning != null) {
+                    Text(
+                        text = tuning.instrument.label(),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                Text(
+                    text = tuning?.variantLabel() ?: stringResource(R.string.tuning_chromatic),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            Icon(
+                painter = painterResource(R.drawable.ic_tuner),
+                contentDescription = stringResource(R.string.tunings),
+                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                modifier = Modifier
+                    .padding(start = 8.dp)
+                    .size(20.dp)
             )
         }
         TooltipBox(
@@ -363,6 +406,7 @@ private fun NoteHeading(
     note: DetectedNote?,
     isLive: Boolean,
     solfegeNotation: Boolean,
+    targetFrequency: Double?,
     compact: Boolean
 ) {
     val noteColor = noteColor(note, isLive)
@@ -398,6 +442,13 @@ private fun NoteHeading(
             fontWeight = FontWeight.Normal,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = if (isLive) 0.8f else 0.5f)
         )
+        if (targetFrequency != null) {
+            Text(
+                text = "→ %.1f Hz".format(targetFrequency),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f)
+            )
+        }
     }
 }
 
@@ -549,6 +600,90 @@ private fun NoteRow(
     }
 }
 
+/**
+ * The strings of the selected tuning. The string being tuned is marked underneath, a tuned string turns the in-tune
+ * color, and tapping a string locks the tuner to it (outlined) until tapped again.
+ */
+@Composable
+private fun StringRow(
+    tuning: Tuning,
+    activeString: Int?,
+    lockedString: Int?,
+    tunedStrings: Set<Int>,
+    solfegeNotation: Boolean,
+    onStringClick: (Int) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val activeColor = MaterialTheme.colorScheme.onSurface
+    val inactiveColor = MaterialTheme.colorScheme.onSurface.copy(alpha = INACTIVE_ALPHA)
+    val tunedColor = TunerTheme.colors.inTune
+    val lockDescription = stringResource(R.string.lock_string)
+    val unlockDescription = stringResource(R.string.unlock_string)
+
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp)
+    ) {
+        tuning.strings.forEachIndexed { index, string ->
+            val active = index == activeString
+            val locked = index == lockedString
+            val tuned = index in tunedStrings
+            val textColor = when {
+                active -> activeColor
+                tuned -> tunedColor
+                else -> inactiveColor
+            }
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(12.dp))
+                    .border(
+                        width = 1.5.dp,
+                        color = if (locked) MaterialTheme.colorScheme.primary else Color.Transparent,
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                    .clickable { onStringClick(index) }
+                    .semantics {
+                        contentDescription = if (locked) unlockDescription else lockDescription
+                    }
+                    .padding(vertical = 6.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Row(verticalAlignment = Alignment.Bottom) {
+                    Text(
+                        text = noteDisplayName(string.main.name, solfegeNotation),
+                        fontSize = if (solfegeNotation) 15.sp else 20.sp,
+                        color = textColor,
+                        maxLines = 1,
+                        softWrap = false
+                    )
+                    Text(
+                        text = string.main.octave.toString(),
+                        fontSize = 11.sp,
+                        color = textColor,
+                        modifier = Modifier.padding(start = 1.dp)
+                    )
+                }
+                Box(
+                    modifier = Modifier
+                        .padding(top = 6.dp)
+                        .width(if (active) 3.dp else 6.dp)
+                        .height(if (active) 16.dp else 6.dp)
+                        .background(
+                            color = when {
+                                active -> activeColor
+                                tuned -> tunedColor
+                                else -> Color.Transparent
+                            },
+                            shape = RoundedCornerShape(3.dp)
+                        )
+                )
+            }
+        }
+    }
+}
+
 /** Live notes use the tuning colors; a held note and the empty state are greyed out. */
 @Composable
 private fun noteColor(note: DetectedNote?, isLive: Boolean): Color = when {
@@ -586,6 +721,14 @@ private class TunerScreenViewModelProvider : PreviewParameterProvider<ITunerView
                 isLive = false
             )
         ),
+        ComposeTunerViewModel(
+            TunerState.Listening(
+                DetectedNote(name = "A", octave = 2, frequency = 111f, cents = 16, stringIndex = 1),
+                inputLevel = 0.5f
+            ),
+            tuning = tuningForId("guitar_standard"),
+            tunedStrings = setOf(0, 5)
+        ),
     )
 
     override fun getDisplayName(index: Int): String? = when (index) {
@@ -594,6 +737,7 @@ private class TunerScreenViewModelProvider : PreviewParameterProvider<ITunerView
         2 -> "Listening - In Tune"
         3 -> "Listening - Slightly Sharp"
         4 -> "Listening - Held Note"
+        5 -> "Listening - Guitar Standard"
         else -> null
     }
 }

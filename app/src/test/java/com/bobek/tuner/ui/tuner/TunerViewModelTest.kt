@@ -21,6 +21,7 @@ package com.bobek.tuner.ui.tuner
 import com.bobek.tuner.data.AppNightMode
 import com.bobek.tuner.domain.DEFAULT_REFERENCE_PITCH
 import com.bobek.tuner.domain.DetectedNote
+import com.bobek.tuner.domain.tuningForId
 import com.bobek.tuner.settings.SettingsRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -150,8 +151,18 @@ class TunerViewModelTest {
 
 private class FakeSettingsRepository(
     referencePitch: Int = DEFAULT_REFERENCE_PITCH,
-    solfegeNotation: Boolean = false
+    solfegeNotation: Boolean = false,
+    tuning: String = ""
 ) : SettingsRepository {
+
+    private val tuningFlow = MutableStateFlow(tuning)
+    var writtenTuning: String? = null
+        private set
+
+    override fun getTuning(): Flow<String> = tuningFlow
+    override suspend fun setTuning(tuning: String) {
+        writtenTuning = tuning
+    }
 
     private val referencePitchFlow = MutableStateFlow(referencePitch)
     private val solfegeNotationFlow = MutableStateFlow(solfegeNotation)
@@ -181,6 +192,115 @@ private class FakeSettingsRepository(
     override suspend fun setSolfegeNotation(solfegeNotation: Boolean) {
         solfegeNotationWritten = true
         writtenSolfegeNotation = solfegeNotation
+    }
+}
+
+class TunerViewModelTuningTest {
+
+    private val testDispatcher = UnconfinedTestDispatcher(TestCoroutineScheduler())
+
+    @Before
+    fun setUp() {
+        Dispatchers.setMain(testDispatcher)
+    }
+
+    @After
+    fun tearDown() {
+        Dispatchers.resetMain()
+    }
+
+    @Test
+    fun tuningLoadsFromSettings() = runTest(testDispatcher) {
+        val viewModel = TunerViewModel(FakeSettingsRepository(tuning = "guitar_drop_d"))
+        assertEquals("guitar_drop_d", viewModel.getTuningFlow().value?.id)
+    }
+
+    @Test
+    fun unknownTuningIdFallsBackToChromatic() = runTest(testDispatcher) {
+        val viewModel = TunerViewModel(FakeSettingsRepository(tuning = "no_such_tuning"))
+        assertNull(viewModel.getTuningFlow().value)
+    }
+
+    @Test
+    fun tuningPersistedToSettingsAfterDebounce() = runTest(testDispatcher) {
+        val settings = FakeSettingsRepository()
+        val viewModel = TunerViewModel(settings)
+
+        viewModel.setTuning(tuningForId("ukulele_standard"))
+        advanceTimeBy(DEBOUNCE + 1.milliseconds)
+
+        assertEquals("ukulele_standard", settings.writtenTuning)
+    }
+
+    @Test
+    fun chromaticPersistedAsEmptyId() = runTest(testDispatcher) {
+        val settings = FakeSettingsRepository(tuning = "guitar_standard")
+        val viewModel = TunerViewModel(settings)
+
+        viewModel.setTuning(null)
+        advanceTimeBy(DEBOUNCE + 1.milliseconds)
+
+        assertEquals("", settings.writtenTuning)
+    }
+
+    @Test
+    fun toggleLockedStringLocksAndUnlocks() {
+        val viewModel = TunerViewModel(FakeSettingsRepository())
+        viewModel.toggleLockedString(2)
+        assertEquals(2, viewModel.getLockedStringFlow().value)
+        viewModel.toggleLockedString(2)
+        assertNull(viewModel.getLockedStringFlow().value)
+    }
+
+    @Test
+    fun changingTuningClearsLockedString() {
+        val viewModel = TunerViewModel(FakeSettingsRepository())
+        viewModel.setTuning(tuningForId("guitar_standard"))
+        viewModel.toggleLockedString(1)
+
+        viewModel.setTuning(tuningForId("violin_standard"))
+
+        assertNull(viewModel.getLockedStringFlow().value)
+        assertTrue(viewModel.getTunedStringsFlow().value.isEmpty())
+    }
+}
+
+class TunedStringTrackerTest {
+
+    private fun note(cents: Int, stringIndex: Int?) =
+        DetectedNote(name = "E", octave = 2, frequency = 82.4f, cents = cents, stringIndex = stringIndex)
+
+    @Test
+    fun stringIsTunedAfterEnoughInTuneFrames() {
+        val tracker = TunedStringTracker(frames = 3)
+        assertNull(tracker.process(note(1, 0)))
+        assertNull(tracker.process(note(-2, 0)))
+        assertEquals(0, tracker.process(note(0, 0)))
+        assertNull(tracker.process(note(0, 0)))
+    }
+
+    @Test
+    fun outOfTuneFrameRestartsCount() {
+        val tracker = TunedStringTracker(frames = 2)
+        tracker.process(note(0, 0))
+        tracker.process(note(12, 0))
+        assertNull(tracker.process(note(0, 0)))
+        assertEquals(0, tracker.process(note(0, 0)))
+    }
+
+    @Test
+    fun chromaticNotesAreNeverTuned() {
+        val tracker = TunedStringTracker(frames = 1)
+        assertNull(tracker.process(note(0, null)))
+        assertNull(tracker.process(null))
+    }
+
+    @Test
+    fun switchingStringRestartsCount() {
+        val tracker = TunedStringTracker(frames = 2)
+        tracker.process(note(0, 0))
+        assertNull(tracker.process(note(0, 1)))
+        assertEquals(1, tracker.process(note(0, 1)))
     }
 }
 

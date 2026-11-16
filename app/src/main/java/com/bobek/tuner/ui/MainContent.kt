@@ -41,6 +41,7 @@ import com.bobek.tuner.ui.licenses.LicenseScreenState
 import com.bobek.tuner.ui.licenses.ThirdPartyLicensesScreen
 import com.bobek.tuner.ui.settings.SettingsScreen
 import com.bobek.tuner.ui.theme.AppTheme
+import com.bobek.tuner.ui.tunings.TuningsScreen
 import com.bobek.tuner.ui.theme.ColorSchemeChoice
 import com.bobek.tuner.ui.tuner.ComposeTunerViewModel
 import com.bobek.tuner.ui.tuner.ITunerViewModel
@@ -82,7 +83,14 @@ fun MainContent(
             composable("tuner") {
                 TunerScreen(
                     viewModel = tunerViewModel,
-                    onSettingsClick = { navController.navigate("settings") }
+                    onSettingsClick = { navController.navigate("settings") },
+                    onTuningsClick = { navController.navigate("tunings") }
+                )
+            }
+            composable("tunings") {
+                TuningsScreen(
+                    viewModel = tunerViewModel,
+                    onBackClick = { navController.popBackStack() }
                 )
             }
             composable("settings") {
@@ -90,6 +98,7 @@ fun MainContent(
                     viewModel = appViewModel,
                     tunerViewModel = tunerViewModel,
                     onBackClick = { navController.popBackStack() },
+                    onTuningsClick = { navController.navigate("tunings") },
                     onLicenseClick = { navController.navigate("license") },
                     onThirdPartyLicensesClick = { navController.navigate("licenses") }
                 )

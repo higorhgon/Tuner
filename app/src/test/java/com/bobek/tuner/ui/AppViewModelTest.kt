@@ -130,6 +130,9 @@ private class FakeSettingsRepository(
     var writtenColorScheme: String? = null
         private set
 
+    override fun getTuning(): Flow<String> = MutableStateFlow(PreferenceConstants.TUNING_VALUE_CHROMATIC)
+    override suspend fun setTuning(tuning: String) = Unit
+
     override fun getColorScheme(): Flow<String> = colorSchemeFlow
     override suspend fun setColorScheme(colorScheme: String) {
         colorSchemeWritten = true
