@@ -36,7 +36,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -281,25 +280,31 @@ private fun HeaderRow(
     onSettingsClick: () -> Unit
 ) {
     val settingsLabel = stringResource(R.string.settings)
-    Row(
+    // A Box rather than a Row, so the tuning button stays centered on the screen whatever the side items' widths.
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = 16.dp, end = 4.dp, top = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .padding(start = 16.dp, end = 4.dp, top = 8.dp)
     ) {
-        Icon(
-            painter = painterResource(R.drawable.ic_mic),
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-            modifier = Modifier.size(28.dp)
-        )
-        InputLevelBar(level = inputLevel, modifier = Modifier.padding(start = 4.dp))
-        Spacer(modifier = Modifier.weight(1f))
+        Row(
+            modifier = Modifier.align(Alignment.CenterStart),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.ic_mic),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                modifier = Modifier.size(28.dp)
+            )
+            InputLevelBar(level = inputLevel, modifier = Modifier.padding(start = 4.dp))
+        }
         TextButton(
             onClick = onTuningsClick,
-            modifier = Modifier.weight(3f, fill = false)
+            modifier = Modifier
+                .align(Alignment.Center)
+                .padding(horizontal = 52.dp)
         ) {
-            Column(horizontalAlignment = Alignment.End) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 if (tuning != null) {
                     Text(
                         text = tuning.instrument.label(),
@@ -329,7 +334,8 @@ private fun HeaderRow(
         TooltipBox(
             positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Below),
             tooltip = { PlainTooltip { Text(settingsLabel) } },
-            state = rememberTooltipState()
+            state = rememberTooltipState(),
+            modifier = Modifier.align(Alignment.CenterEnd)
         ) {
             IconButton(onClick = onSettingsClick) {
                 Icon(
