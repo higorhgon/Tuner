@@ -41,6 +41,8 @@ import com.bobek.tuner.ui.licenses.LicenseScreenState
 import com.bobek.tuner.ui.licenses.ThirdPartyLicensesScreen
 import com.bobek.tuner.ui.settings.SettingsScreen
 import com.bobek.tuner.ui.theme.AppTheme
+import com.bobek.tuner.ui.tunings.TuningsScreen
+import com.bobek.tuner.ui.theme.ColorSchemeChoice
 import com.bobek.tuner.ui.tuner.ComposeTunerViewModel
 import com.bobek.tuner.ui.tuner.ITunerViewModel
 import com.bobek.tuner.ui.tuner.TunerScreen
@@ -56,6 +58,7 @@ fun MainContent(
 ) {
     val navController = rememberNavController()
     val nightMode by appViewModel.getNightModeFlow().collectAsState()
+    val colorScheme by appViewModel.getColorSchemeFlow().collectAsState()
     val tunerState by tunerViewModel.getTunerStateFlow().collectAsState()
 
     val isDarkTheme = when (nightMode) {
@@ -72,12 +75,22 @@ fun MainContent(
         }
     }
 
-    AppTheme(darkTheme = isDarkTheme) {
+    AppTheme(
+        darkTheme = isDarkTheme,
+        palette = ColorSchemeChoice.forPreferenceValue(colorScheme).palette
+    ) {
         NavHost(navController = navController, startDestination = "tuner") {
             composable("tuner") {
                 TunerScreen(
                     viewModel = tunerViewModel,
-                    onSettingsClick = { navController.navigate("settings") }
+                    onSettingsClick = { navController.navigate("settings") },
+                    onTuningsClick = { navController.navigate("tunings") }
+                )
+            }
+            composable("tunings") {
+                TuningsScreen(
+                    viewModel = tunerViewModel,
+                    onBackClick = { navController.popBackStack() }
                 )
             }
             composable("settings") {
@@ -85,6 +98,7 @@ fun MainContent(
                     viewModel = appViewModel,
                     tunerViewModel = tunerViewModel,
                     onBackClick = { navController.popBackStack() },
+                    onTuningsClick = { navController.navigate("tunings") },
                     onLicenseClick = { navController.navigate("license") },
                     onThirdPartyLicensesClick = { navController.navigate("licenses") }
                 )

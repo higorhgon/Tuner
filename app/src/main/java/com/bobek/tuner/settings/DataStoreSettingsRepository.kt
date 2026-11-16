@@ -40,6 +40,8 @@ class DataStoreSettingsRepository @Inject constructor(
         val NIGHT_MODE_KEY = stringPreferencesKey(PreferenceConstants.NIGHT_MODE)
         val REFERENCE_PITCH_KEY = intPreferencesKey(PreferenceConstants.REFERENCE_PITCH)
         val SOLFEGE_NOTATION_KEY = booleanPreferencesKey(PreferenceConstants.SOLFEGE_NOTATION)
+        val COLOR_SCHEME_KEY = stringPreferencesKey(PreferenceConstants.COLOR_SCHEME)
+        val TUNING_KEY = stringPreferencesKey(PreferenceConstants.TUNING)
     }
 
     override fun getNightMode() = preferencesDataStore.data
@@ -65,5 +67,21 @@ class DataStoreSettingsRepository @Inject constructor(
     override suspend fun setSolfegeNotation(solfegeNotation: Boolean) {
         preferencesDataStore.edit { it[SOLFEGE_NOTATION_KEY] = solfegeNotation }
         Log.d(TAG, "Persisted solfegeNotation: $solfegeNotation")
+    }
+
+    override fun getColorScheme() = preferencesDataStore.data
+        .map { it[COLOR_SCHEME_KEY] ?: PreferenceConstants.COLOR_SCHEME_VALUE_SYSTEM }
+
+    override suspend fun setColorScheme(colorScheme: String) {
+        preferencesDataStore.edit { it[COLOR_SCHEME_KEY] = colorScheme }
+        Log.d(TAG, "Persisted colorScheme: $colorScheme")
+    }
+
+    override fun getTuning() = preferencesDataStore.data
+        .map { it[TUNING_KEY] ?: PreferenceConstants.TUNING_VALUE_CHROMATIC }
+
+    override suspend fun setTuning(tuning: String) {
+        preferencesDataStore.edit { it[TUNING_KEY] = tuning }
+        Log.d(TAG, "Persisted tuning: $tuning")
     }
 }

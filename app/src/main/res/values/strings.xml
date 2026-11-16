@@ -36,6 +36,9 @@
     <string name="night_mode_follow_system">Follow system</string>
     <string name="night_mode_no">Light</string>
     <string name="night_mode_yes">Dark</string>
+    <string name="color_scheme">Color scheme</string>
+    <string name="color_scheme_system">System</string>
+    <string name="night_mode_set_by_color_scheme">Set by the color scheme</string>
     <string name="about">About</string>
     <string name="author">Author</string>
     <string name="license">License</string>
@@ -46,4 +49,45 @@
     <string name="source_code_name" translatable="false">GitHub</string>
     <string name="license_name" translatable="false">GNU GPLv3</string>
     <string name="author_name" translatable="false">Philipp Bobek</string>
+    <string name="instrument_guitar">Guitar / Acoustic guitar</string>
+    <string name="instrument_banjo">Banjo</string>
+    <string name="instrument_ukulele">Ukulele</string>
+    <string name="instrument_violin">Violin</string>
+    <string name="instrument_viola">Viola</string>
+    <string name="instrument_cello">Cello</string>
+    <string name="instrument_double_bass">Double bass</string>
+    <string name="instrument_electric_bass">Electric bass</string>
+    <string name="instrument_mandolin">Mandolin</string>
+    <string name="tuning_standard">Standard</string>
+    <string name="tuning_half_step_down">Half step down</string>
+    <string name="tuning_whole_step_down">Whole step down</string>
+    <string name="tuning_n_strings">%1$d strings</string>
+    <string name="tuning_d_tuning">D tuning</string>
+    <string name="tuning_baritone">Baritone</string>
+    <string name="tuning_bass">Bass</string>
+    <string name="tuning_tenor">Tenor</string>
+    <string name="tuning_plectrum">Plectrum</string>
+    <string name="tuning_solo">Solo tuning</string>
+    <string name="tuning_high_c">High C</string>
+    <string name="tuning_natural">Natural</string>
+    <string name="tunings">Tunings</string>
+    <string name="tuning">Tuning</string>
+    <string name="tuning_chromatic">Chromatic</string>
+    <string name="tuning_chromatic_summary">All notes, any instrument</string>
+    <string name="lock_string">Lock to this string</string>
+    <string name="unlock_string">Unlock string</string>
+    <string name="instrument_viola_caipira" translatable="false">Viola caipira</string>
+    <string name="instrument_cavaquinho" translatable="false">Cavaquinho</string>
+    <string name="tuning_drop_d" translatable="false">Drop D</string>
+    <string name="tuning_drop_c" translatable="false">Drop C</string>
+    <string name="tuning_open_g" translatable="false">Open G</string>
+    <string name="tuning_open_d" translatable="false">Open D</string>
+    <string name="tuning_open_e" translatable="false">Open E</string>
+    <string name="tuning_dadgad" translatable="false">DADGAD</string>
+    <string name="tuning_low_g" translatable="false">Low G</string>
+    <string name="tuning_double_c" translatable="false">Double C</string>
+    <string name="tuning_cebolao_e" translatable="false">Cebolão (E)</string>
+    <string name="tuning_cebolao_d" translatable="false">Cebolão (D)</string>
+    <string name="tuning_rio_abaixo" translatable="false">Rio Abaixo (G)</string>
+    <string name="tuning_combined" translatable="false">%1$s · %2$s</string>
 </resources>

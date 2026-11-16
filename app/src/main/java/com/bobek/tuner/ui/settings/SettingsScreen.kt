@@ -47,6 +47,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -59,6 +60,8 @@ import com.bobek.tuner.R
 import com.bobek.tuner.data.AppNightMode
 import com.bobek.tuner.ui.ComposeAppViewModel
 import com.bobek.tuner.ui.IAppViewModel
+import com.bobek.tuner.ui.theme.ColorSchemeChoice
+import com.bobek.tuner.ui.tunings.fullLabel
 import com.bobek.tuner.ui.tuner.ComposeTunerViewModel
 import com.bobek.tuner.ui.tuner.ITunerViewModel
 import com.bobek.tuner.ui.tuner.ReferencePitchDialog
@@ -72,15 +75,20 @@ fun SettingsScreen(
     viewModel: IAppViewModel = ComposeAppViewModel(),
     tunerViewModel: ITunerViewModel = ComposeTunerViewModel(),
     onBackClick: () -> Unit = {},
+    onTuningsClick: () -> Unit = {},
     onLicenseClick: () -> Unit = {},
     onThirdPartyLicensesClick: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val nightMode by viewModel.getNightModeFlow().collectAsState()
+    val colorScheme by viewModel.getColorSchemeFlow().collectAsState()
+    val colorSchemeChoice = ColorSchemeChoice.forPreferenceValue(colorScheme)
     val referencePitch by tunerViewModel.getReferencePitchFlow().collectAsState()
     val solfegeNotation by tunerViewModel.getSolfegeNotationFlow().collectAsState()
+    val tuning by tunerViewModel.getTuningFlow().collectAsState()
 
     var showNightModeDialog by rememberSaveable { mutableStateOf(false) }
+    var showColorSchemeDialog by rememberSaveable { mutableStateOf(false) }
     var showReferencePitchDialog by rememberSaveable { mutableStateOf(false) }
 
     Scaffold(
@@ -111,6 +119,14 @@ fun SettingsScreen(
                 }
             ) {
                 ListItem(
+                    headlineContent = { Text(stringResource(R.string.tuning)) },
+                    supportingContent = {
+                        Text(tuning?.fullLabel() ?: stringResource(R.string.tuning_chromatic))
+                    },
+                    modifier = Modifier.clickable { onTuningsClick() }
+                )
+
+                ListItem(
                     headlineContent = { Text(stringResource(R.string.reference_pitch)) },
                     supportingContent = { Text(stringResource(R.string.reference_pitch_value, referencePitch)) },
                     modifier = Modifier.clickable { showReferencePitchDialog = true }
@@ -137,9 +153,24 @@ fun SettingsScreen(
                 }
             ) {
                 ListItem(
+                    headlineContent = { Text(stringResource(R.string.color_scheme)) },
+                    supportingContent = { Text(colorSchemeChoice.label()) },
+                    modifier = Modifier.clickable { showColorSchemeDialog = true }
+                )
+
+                // An Omarchy color scheme has its own light or dark mode, so night mode only applies to the system one.
+                val nightModeEnabled = colorSchemeChoice.palette == null
+                ListItem(
                     headlineContent = { Text(stringResource(R.string.night_mode)) },
-                    supportingContent = { Text(stringResource(nightMode.labelResourceId)) },
-                    modifier = Modifier.clickable { showNightModeDialog = true }
+                    supportingContent = {
+                        Text(
+                            if (nightModeEnabled) stringResource(nightMode.labelResourceId)
+                            else stringResource(R.string.night_mode_set_by_color_scheme)
+                        )
+                    },
+                    modifier = Modifier
+                        .alpha(if (nightModeEnabled) 1f else 0.5f)
+                        .clickable(enabled = nightModeEnabled) { showNightModeDialog = true }
                 )
             }
 
@@ -194,6 +225,22 @@ fun SettingsScreen(
             onDismiss = {
                 showNightModeDialog = false
             }
+        )
+    }
+
+    if (showColorSchemeDialog) {
+        SingleChoiceDialog(
+            SingleChoiceDialogState(
+                title = stringResource(R.string.color_scheme),
+                entries = ColorSchemeChoice.entries,
+                currentValue = colorScheme
+            ),
+            onValueSelected = { choice ->
+                viewModel.setColorScheme(choice.preferenceValue)
+                showColorSchemeDialog = false
+            },
+            onDismiss = { showColorSchemeDialog = false },
+            label = { it.label() }
         )
     }
 

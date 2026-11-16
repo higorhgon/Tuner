@@ -59,7 +59,6 @@ class InstrumentedTest {
 
     @Test
     fun initialState() {
-        onTopBarTitle().assertIsDisplayed()
         onSettingsButton().assertIsDisplayed()
         onPermissionRationaleText().assertDoesNotExist()
         onGrantPermissionButton().assertDoesNotExist()
@@ -73,7 +72,7 @@ class InstrumentedTest {
 
         pressBack()
         composeTestRule.waitForIdle()
-        onTopBarTitle().assertIsDisplayed()
+        onSettingsButton().assertIsDisplayed()
     }
 
     @Test
@@ -138,7 +137,7 @@ class InstrumentedTest {
         composeTestRule.waitForIdle()
     }
 
-    private fun onTopBarTitle(@StringRes titleResId: Int = R.string.tuner): SemanticsNodeInteraction =
+    private fun onTopBarTitle(@StringRes titleResId: Int): SemanticsNodeInteraction =
         onTopBarTitle(getString(titleResId))
 
     private fun onTopBarTitle(title: String): SemanticsNodeInteraction =

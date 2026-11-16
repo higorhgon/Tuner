@@ -43,7 +43,9 @@ data class DetectedNote(
     val name: String,
     val octave: Int,
     val frequency: Float,
-    val cents: Int
+    val cents: Int,
+    /** Index of the instrument string this note targets, when tuning an instrument; null in chromatic mode. */
+    val stringIndex: Int? = null
 ) {
     fun isSameNote(other: DetectedNote?): Boolean =
         other != null && name == other.name && octave == other.octave
@@ -66,6 +68,8 @@ data class DetectedNote(
     }
 }
 
-fun DetectedNote.displayName(solfegeNotation: Boolean): String =
+fun DetectedNote.displayName(solfegeNotation: Boolean): String = noteDisplayName(name, solfegeNotation)
+
+fun noteDisplayName(name: String, solfegeNotation: Boolean): String =
     if (solfegeNotation) SOLFEGE_NAMES[name] ?: name
     else name

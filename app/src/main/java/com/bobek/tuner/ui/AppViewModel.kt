@@ -21,6 +21,7 @@ package com.bobek.tuner.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bobek.tuner.data.AppNightMode
+import com.bobek.tuner.settings.PreferenceConstants
 import com.bobek.tuner.settings.SettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import jakarta.inject.Inject
@@ -38,6 +39,8 @@ private val SETTINGS_DEBOUNCE = 1.seconds
 interface IAppViewModel {
     fun getNightModeFlow(): StateFlow<AppNightMode>
     fun setNightMode(nightMode: AppNightMode)
+    fun getColorSchemeFlow(): StateFlow<String>
+    fun setColorScheme(colorScheme: String)
 }
 
 @HiltViewModel
@@ -47,6 +50,7 @@ class AppViewModel @Inject constructor(
 ) : ViewModel(), IAppViewModel {
 
     private val nightModeFlow = MutableStateFlow(AppNightMode.FOLLOW_SYSTEM)
+    private val colorSchemeFlow = MutableStateFlow(PreferenceConstants.COLOR_SCHEME_VALUE_SYSTEM)
 
     init {
         viewModelScope.launch { initFromSettings() }
@@ -54,10 +58,15 @@ class AppViewModel @Inject constructor(
             nightModeFlow.drop(1).debounce(SETTINGS_DEBOUNCE)
                 .collect { settingsRepository.setNightMode(it) }
         }
+        viewModelScope.launch {
+            colorSchemeFlow.drop(1).debounce(SETTINGS_DEBOUNCE)
+                .collect { settingsRepository.setColorScheme(it) }
+        }
     }
 
     private suspend fun initFromSettings() {
         settingsRepository.getNightMode().firstOrNull()?.let { nightModeFlow.value = it }
+        settingsRepository.getColorScheme().firstOrNull()?.let { colorSchemeFlow.value = it }
     }
 
     override fun getNightModeFlow(): StateFlow<AppNightMode> = nightModeFlow
@@ -65,13 +74,27 @@ class AppViewModel @Inject constructor(
     override fun setNightMode(nightMode: AppNightMode) {
         nightModeFlow.value = nightMode
     }
+
+    override fun getColorSchemeFlow(): StateFlow<String> = colorSchemeFlow
+
+    override fun setColorScheme(colorScheme: String) {
+        colorSchemeFlow.value = colorScheme
+    }
 }
 
 class ComposeAppViewModel(
-    nightMode: AppNightMode = AppNightMode.FOLLOW_SYSTEM
+    nightMode: AppNightMode = AppNightMode.FOLLOW_SYSTEM,
+    colorScheme: String = PreferenceConstants.COLOR_SCHEME_VALUE_SYSTEM
 ) : IAppViewModel {
 
     private val nightModeFlow = MutableStateFlow(nightMode)
+    private val colorSchemeFlow = MutableStateFlow(colorScheme)
+
+    override fun getColorSchemeFlow(): StateFlow<String> = colorSchemeFlow
+
+    override fun setColorScheme(colorScheme: String) {
+        colorSchemeFlow.value = colorScheme
+    }
 
     override fun getNightModeFlow(): StateFlow<AppNightMode> = nightModeFlow
 

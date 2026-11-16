@@ -47,8 +47,9 @@ android {
         applicationId = "com.bobek.tuner"
         minSdk = 24
         targetSdk = 37
-        versionCode = 3
-        versionName = "1.1.0"
+        // CI release builds pass -PversionCode / -PversionName (see .github/workflows/release.yml).
+        versionCode = providers.gradleProperty("versionCode").orNull?.toInt() ?: 3
+        versionName = providers.gradleProperty("versionName").orNull ?: "1.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

@@ -42,7 +42,7 @@ class LicenseRepositoryTest {
         )
 
         assertEquals(
-            listOf("Alpha", "Material Symbols", "Zeta"),
+            listOf("Alpha", "Material Symbols", "Omarchy (color schemes)", "Zeta"),
             LicenseRepository.getThirdPartyLibraryNames(resources)
         )
     }
