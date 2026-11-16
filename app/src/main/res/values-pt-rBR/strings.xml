@@ -36,6 +36,9 @@
     <string name="night_mode_follow_system">Seguir sistema</string>
     <string name="night_mode_no">Claro</string>
     <string name="night_mode_yes">Escuro</string>
+    <string name="color_scheme">Esquema de cores</string>
+    <string name="color_scheme_system">Sistema</string>
+    <string name="night_mode_set_by_color_scheme">Definido pelo esquema de cores</string>
     <string name="about">Sobre</string>
     <string name="author">Autor</string>
     <string name="license">Licença</string>

@@ -20,6 +20,7 @@ package com.bobek.tuner.ui
 
 import com.bobek.tuner.data.AppNightMode
 import com.bobek.tuner.domain.DEFAULT_REFERENCE_PITCH
+import com.bobek.tuner.settings.PreferenceConstants
 import com.bobek.tuner.settings.SettingsRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -94,14 +95,46 @@ class AppViewModelTest {
         advanceTimeBy(DEBOUNCE + 1.milliseconds)
 
         assertFalse(settings.nightModeWritten)
+        assertFalse(settings.colorSchemeWritten)
+    }
+
+    @Test
+    fun initialColorSchemeLoadsFromSettings() = runTest(testDispatcher) {
+        val settings = FakeSettingsRepository(colorScheme = "tokyo-night")
+        val viewModel = createViewModel(settings)
+        assertEquals("tokyo-night", viewModel.getColorSchemeFlow().value)
+    }
+
+    @Test
+    fun colorSchemePersistedToSettingsAfterDebounce() = runTest(testDispatcher) {
+        val settings = FakeSettingsRepository()
+        val viewModel = createViewModel(settings)
+
+        viewModel.setColorScheme("gruvbox")
+        advanceTimeBy(DEBOUNCE + 1.milliseconds)
+
+        assertEquals("gruvbox", settings.writtenColorScheme)
     }
 }
 
 private class FakeSettingsRepository(
-    nightMode: AppNightMode = AppNightMode.FOLLOW_SYSTEM
+    nightMode: AppNightMode = AppNightMode.FOLLOW_SYSTEM,
+    colorScheme: String = PreferenceConstants.COLOR_SCHEME_VALUE_SYSTEM
 ) : SettingsRepository {
 
     private val nightModeFlow = MutableStateFlow(nightMode)
+    private val colorSchemeFlow = MutableStateFlow(colorScheme)
+
+    var colorSchemeWritten = false
+        private set
+    var writtenColorScheme: String? = null
+        private set
+
+    override fun getColorScheme(): Flow<String> = colorSchemeFlow
+    override suspend fun setColorScheme(colorScheme: String) {
+        colorSchemeWritten = true
+        writtenColorScheme = colorScheme
+    }
     private val referencePitchFlow = MutableStateFlow(DEFAULT_REFERENCE_PITCH)
     private val solfegeNotationFlow = MutableStateFlow(false)
 

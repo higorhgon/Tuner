@@ -49,7 +49,8 @@ import com.bobek.tuner.data.PreferenceChoice
 fun <T : PreferenceChoice> SingleChoiceDialog(
     @PreviewParameter(SingleChoiceDialogStateProvider::class) state: SingleChoiceDialogState<T>,
     onValueSelected: (T) -> Unit = {},
-    onDismiss: () -> Unit = {}
+    onDismiss: () -> Unit = {},
+    label: @Composable (T) -> String = { stringResource(it.labelResourceId) }
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -78,7 +79,7 @@ fun <T : PreferenceChoice> SingleChoiceDialog(
                             onClick = null
                         )
                         Text(
-                            text = stringResource(entry.labelResourceId),
+                            text = label(entry),
                             style = MaterialTheme.typography.bodyLarge,
                             modifier = Modifier.padding(start = 16.dp)
                         )

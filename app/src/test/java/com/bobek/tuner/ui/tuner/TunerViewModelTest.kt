@@ -168,6 +168,9 @@ private class FakeSettingsRepository(
     override fun getNightMode() = MutableStateFlow(AppNightMode.FOLLOW_SYSTEM)
     override suspend fun setNightMode(nightMode: AppNightMode) = Unit
 
+    override fun getColorScheme() = MutableStateFlow("system")
+    override suspend fun setColorScheme(colorScheme: String) = Unit
+
     override fun getReferencePitch(): Flow<Int> = referencePitchFlow
     override suspend fun setReferencePitch(referencePitch: Int) {
         referencePitchWritten = true

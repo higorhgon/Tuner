@@ -36,6 +36,9 @@
     <string name="night_mode_follow_system">Sistemi izle</string>
     <string name="night_mode_no">Açık</string>
     <string name="night_mode_yes">Koyu</string>
+    <string name="color_scheme">Renk şeması</string>
+    <string name="color_scheme_system">Sistem</string>
+    <string name="night_mode_set_by_color_scheme">Renk şeması tarafından belirlenir</string>
     <string name="about">Hakkında</string>
     <string name="author">Yazar</string>
     <string name="license">Lisans</string>

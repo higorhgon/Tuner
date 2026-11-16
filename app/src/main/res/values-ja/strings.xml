@@ -36,6 +36,9 @@
     <string name="night_mode_follow_system">システムに従う</string>
     <string name="night_mode_no">ライト</string>
     <string name="night_mode_yes">ダーク</string>
+    <string name="color_scheme">配色</string>
+    <string name="color_scheme_system">システム</string>
+    <string name="night_mode_set_by_color_scheme">配色によって設定されます</string>
     <string name="about">アプリについて</string>
     <string name="author">作者</string>
     <string name="license">ライセンス</string>

@@ -36,6 +36,9 @@
     <string name="night_mode_follow_system">اتباع النظام</string>
     <string name="night_mode_no">فاتح</string>
     <string name="night_mode_yes">داكن</string>
+    <string name="color_scheme">نظام الألوان</string>
+    <string name="color_scheme_system">النظام</string>
+    <string name="night_mode_set_by_color_scheme">يحدده نظام الألوان</string>
     <string name="about">حول التطبيق</string>
     <string name="author">المؤلف</string>
     <string name="license">الترخيص</string>

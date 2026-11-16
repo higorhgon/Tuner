@@ -92,6 +92,7 @@ import com.bobek.tuner.R
 import com.bobek.tuner.domain.DetectedNote
 import com.bobek.tuner.domain.displayName
 import com.bobek.tuner.domain.noteDisplayName
+import com.bobek.tuner.ui.theme.TunerTheme
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.min
@@ -104,11 +105,13 @@ private val NOTE_ROW = listOf("A", "A#", "B", "C", "C#", "D", "D#", "E", "F", "F
 internal const val IN_TUNE_CENTS = 5
 
 private const val MAX_CENTS = 50f
-private const val MAX_NEEDLE_ANGLE_DEG = 48f
+private const val MAX_NEEDLE_ANGLE_DEG = 34f
+private const val LABEL_ANGLE_DEG = MAX_NEEDLE_ANGLE_DEG + 6f
+private const val OUTER_TICK_RADIUS = 0.86f
+private const val LABEL_RADIUS = 0.80f
 private const val HELD_ALPHA = 0.45f
 private const val INACTIVE_ALPHA = 0.4f
 
-private val InTuneBorderColor = Color(0xFF4CAF50)
 private val InTuneBorderWidth = 6.dp
 
 @Composable
@@ -143,7 +146,7 @@ fun TunerScreen(
     val inTune = isLive && note != null && abs(note.cents) < IN_TUNE_CENTS
 
     val borderColor by animateColorAsState(
-        targetValue = if (inTune) InTuneBorderColor else Color.Transparent,
+        targetValue = if (inTune) TunerTheme.colors.inTuneBorder else Color.Transparent,
         animationSpec = tween(durationMillis = 150),
         label = "border"
     )
@@ -304,7 +307,7 @@ private fun InputLevelBar(level: Float, modifier: Modifier = Modifier) {
         label = "inputLevel"
     )
     val trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.25f)
-    val levelColor = MaterialTheme.colorScheme.tertiary
+    val levelColor = TunerTheme.colors.nearlyInTune
     Canvas(
         modifier = modifier
             .width(4.dp)
@@ -426,14 +429,19 @@ private fun NeedleGauge(
 
     Canvas(modifier = modifier) {
         val ringRadius = 22.dp.toPx()
-        val pivot = Offset(size.width / 2f, size.height - ringRadius - 4.dp.toPx())
-        val labelMargin = 36.dp.toPx()
+        val topMargin = 8.dp.toPx()
+        val bottomExtent = ringRadius + 4.dp.toPx()
+        val labelHalfWidth = 16.dp.toPx()
         val maxAngleRad = Math.toRadians(MAX_NEEDLE_ANGLE_DEG.toDouble()).toFloat()
-        val labelAngleRad = Math.toRadians((MAX_NEEDLE_ANGLE_DEG + 7).toDouble()).toFloat()
+        val labelAngleRad = Math.toRadians(LABEL_ANGLE_DEG.toDouble()).toFloat()
+        // Largest arc that fits both the width (♭/♯ labels are the widest part) and the height.
         val radius = min(
-            (pivot.y - 8.dp.toPx()),
-            (size.width / 2f - labelMargin) / sin(labelAngleRad)
+            size.height - topMargin - bottomExtent,
+            (size.width / 2f - labelHalfWidth) / (LABEL_RADIUS * sin(labelAngleRad))
         ).coerceAtLeast(ringRadius * 2)
+        // When the width limits the arc, center the drawing vertically instead of pinning it to the bottom.
+        val usedHeight = topMargin + radius + bottomExtent
+        val pivot = Offset(size.width / 2f, (size.height + usedHeight) / 2f - bottomExtent)
 
         fun pointAt(angleRad: Float, r: Float) = Offset(
             pivot.x + r * sin(angleRad),
@@ -445,7 +453,7 @@ private fun NeedleGauge(
         val tickStroke = 1.5.dp.toPx()
         listOf(-1f, -0.5f, 0.5f, 1f).forEach { fraction ->
             val angle = maxAngleRad * fraction
-            val r = if (abs(fraction) == 1f) radius * 0.86f else radius
+            val r = if (abs(fraction) == 1f) radius * OUTER_TICK_RADIUS else radius
             drawLine(tickColor, pointAt(angle, r - tickLength), pointAt(angle, r), tickStroke)
         }
         val centerGap = 9.dp.toPx()
@@ -462,7 +470,7 @@ private fun NeedleGauge(
         // ♭ and ♯ labels beyond the outer ticks.
         listOf(-1 to "♭", 1 to "♯").forEach { (side, label) ->
             val layout = textMeasurer.measure(label, labelStyle)
-            val anchor = pointAt(side * labelAngleRad, radius * 0.80f)
+            val anchor = pointAt(side * labelAngleRad, radius * LABEL_RADIUS)
             drawText(
                 layout,
                 topLeft = Offset(
@@ -551,9 +559,9 @@ private fun noteColor(note: DetectedNote?, isLive: Boolean): Color = when {
 
 @Composable
 private fun centsColor(cents: Int): Color = when {
-    abs(cents) < IN_TUNE_CENTS -> MaterialTheme.colorScheme.primary
-    abs(cents) < 20 -> MaterialTheme.colorScheme.tertiary
-    else -> MaterialTheme.colorScheme.error
+    abs(cents) < IN_TUNE_CENTS -> TunerTheme.colors.inTune
+    abs(cents) < 20 -> TunerTheme.colors.nearlyInTune
+    else -> TunerTheme.colors.outOfTune
 }
 
 private class TunerScreenViewModelProvider : PreviewParameterProvider<ITunerViewModel> {

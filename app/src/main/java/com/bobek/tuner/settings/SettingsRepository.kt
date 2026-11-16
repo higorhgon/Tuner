@@ -28,4 +28,6 @@ interface SettingsRepository {
     suspend fun setReferencePitch(referencePitch: Int)
     fun getSolfegeNotation(): Flow<Boolean>
     suspend fun setSolfegeNotation(solfegeNotation: Boolean)
+    fun getColorScheme(): Flow<String>
+    suspend fun setColorScheme(colorScheme: String)
 }

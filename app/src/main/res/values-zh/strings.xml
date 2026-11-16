@@ -36,6 +36,9 @@
     <string name="night_mode_follow_system">跟随系统</string>
     <string name="night_mode_no">浅色</string>
     <string name="night_mode_yes">深色</string>
+    <string name="color_scheme">配色方案</string>
+    <string name="color_scheme_system">系统</string>
+    <string name="night_mode_set_by_color_scheme">由配色方案决定</string>
     <string name="about">关于</string>
     <string name="author">作者</string>
     <string name="license">许可证</string>

@@ -41,6 +41,7 @@ import com.bobek.tuner.ui.licenses.LicenseScreenState
 import com.bobek.tuner.ui.licenses.ThirdPartyLicensesScreen
 import com.bobek.tuner.ui.settings.SettingsScreen
 import com.bobek.tuner.ui.theme.AppTheme
+import com.bobek.tuner.ui.theme.ColorSchemeChoice
 import com.bobek.tuner.ui.tuner.ComposeTunerViewModel
 import com.bobek.tuner.ui.tuner.ITunerViewModel
 import com.bobek.tuner.ui.tuner.TunerScreen
@@ -56,6 +57,7 @@ fun MainContent(
 ) {
     val navController = rememberNavController()
     val nightMode by appViewModel.getNightModeFlow().collectAsState()
+    val colorScheme by appViewModel.getColorSchemeFlow().collectAsState()
     val tunerState by tunerViewModel.getTunerStateFlow().collectAsState()
 
     val isDarkTheme = when (nightMode) {
@@ -72,7 +74,10 @@ fun MainContent(
         }
     }
 
-    AppTheme(darkTheme = isDarkTheme) {
+    AppTheme(
+        darkTheme = isDarkTheme,
+        palette = ColorSchemeChoice.forPreferenceValue(colorScheme).palette
+    ) {
         NavHost(navController = navController, startDestination = "tuner") {
             composable("tuner") {
                 TunerScreen(

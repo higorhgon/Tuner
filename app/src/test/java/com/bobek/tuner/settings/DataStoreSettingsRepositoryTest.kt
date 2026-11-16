@@ -95,4 +95,17 @@ class DataStoreSettingsRepositoryTest {
         repo.setSolfegeNotation(true)
         assertEquals(true, repo.getSolfegeNotation().first())
     }
+
+    @Test
+    fun colorSchemeDefaultIsSystem() = testScope.runTest {
+        val repo = createRepository()
+        assertEquals(PreferenceConstants.COLOR_SCHEME_VALUE_SYSTEM, repo.getColorScheme().first())
+    }
+
+    @Test
+    fun colorSchemeRoundTrip() = testScope.runTest {
+        val repo = createRepository()
+        repo.setColorScheme("nord")
+        assertEquals("nord", repo.getColorScheme().first())
+    }
 }

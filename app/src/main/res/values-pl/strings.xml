@@ -36,6 +36,9 @@
     <string name="night_mode_follow_system">Zgodnie z systemem</string>
     <string name="night_mode_no">Jasny</string>
     <string name="night_mode_yes">Ciemny</string>
+    <string name="color_scheme">Schemat kolorów</string>
+    <string name="color_scheme_system">Systemowy</string>
+    <string name="night_mode_set_by_color_scheme">Ustawiony przez schemat kolorów</string>
     <string name="about">O aplikacji</string>
     <string name="author">Autor</string>
     <string name="license">Licencja</string>

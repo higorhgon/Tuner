@@ -26,4 +26,6 @@ object PreferenceConstants {
     const val NIGHT_MODE_VALUE_YES = "yes"
     const val REFERENCE_PITCH = "reference_pitch"
     const val SOLFEGE_NOTATION = "solfege_notation"
+    const val COLOR_SCHEME = "color_scheme"
+    const val COLOR_SCHEME_VALUE_SYSTEM = "system"
 }

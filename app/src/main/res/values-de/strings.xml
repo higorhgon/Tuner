@@ -36,6 +36,9 @@
     <string name="night_mode_follow_system">Systemstandard</string>
     <string name="night_mode_no">Hell</string>
     <string name="night_mode_yes">Dunkel</string>
+    <string name="color_scheme">Farbschema</string>
+    <string name="color_scheme_system">System</string>
+    <string name="night_mode_set_by_color_scheme">Vom Farbschema festgelegt</string>
     <string name="about">Über die App</string>
     <string name="author">Autor</string>
     <string name="license">Lizenz</string>

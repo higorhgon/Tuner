@@ -24,7 +24,8 @@ import de.philipp_bobek.oss_licenses_parser.OssLicensesParser
 import de.philipp_bobek.oss_licenses_parser.ThirdPartyLicenseMetadata
 
 private val LICENSE_MANUAL_RESOURCES = mapOf(
-    "Material Symbols" to R.raw.license_apache_2_0
+    "Material Symbols" to R.raw.license_apache_2_0,
+    "Omarchy (color schemes)" to R.raw.license_omarchy_mit
 )
 
 private val LICENSE_URL_RESOURCES = mapOf(

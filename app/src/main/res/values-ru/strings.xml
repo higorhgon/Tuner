@@ -36,6 +36,9 @@
     <string name="night_mode_follow_system">Как в системе</string>
     <string name="night_mode_no">Светлая</string>
     <string name="night_mode_yes">Тёмная</string>
+    <string name="color_scheme">Цветовая схема</string>
+    <string name="color_scheme_system">Системная</string>
+    <string name="night_mode_set_by_color_scheme">Задаётся цветовой схемой</string>
     <string name="about">О приложении</string>
     <string name="author">Автор</string>
     <string name="license">Лицензия</string>

@@ -36,6 +36,9 @@
     <string name="night_mode_follow_system">Systeem volgen</string>
     <string name="night_mode_no">Licht</string>
     <string name="night_mode_yes">Donker</string>
+    <string name="color_scheme">Kleurenschema</string>
+    <string name="color_scheme_system">Systeem</string>
+    <string name="night_mode_set_by_color_scheme">Ingesteld door het kleurenschema</string>
     <string name="about">Over</string>
     <string name="author">Auteur</string>
     <string name="license">Licentie</string>

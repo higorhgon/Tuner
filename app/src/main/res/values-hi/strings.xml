@@ -36,6 +36,9 @@
     <string name="night_mode_follow_system">सिस्टम का अनुसरण करें</string>
     <string name="night_mode_no">हल्का</string>
     <string name="night_mode_yes">गहरा</string>
+    <string name="color_scheme">रंग योजना</string>
+    <string name="color_scheme_system">सिस्टम</string>
+    <string name="night_mode_set_by_color_scheme">रंग योजना द्वारा निर्धारित</string>
     <string name="about">ऐप के बारे में</string>
     <string name="author">लेखक</string>
     <string name="license">लाइसेंस</string>

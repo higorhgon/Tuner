@@ -36,6 +36,9 @@
     <string name="night_mode_follow_system">시스템 설정 따르기</string>
     <string name="night_mode_no">밝게</string>
     <string name="night_mode_yes">어둡게</string>
+    <string name="color_scheme">색 구성표</string>
+    <string name="color_scheme_system">시스템</string>
+    <string name="night_mode_set_by_color_scheme">색 구성표에 따라 설정됨</string>
     <string name="about">정보</string>
     <string name="author">제작자</string>
     <string name="license">라이선스</string>
