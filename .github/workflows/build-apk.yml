@@ -3,12 +3,11 @@ name: Build APK
 on:
   push:
     branches: ["**"]
-    tags: ["v*"]
   pull_request:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -54,41 +53,6 @@ jobs:
           path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
 
-      # Signed release APK: only runs when the KEYSTORE_BASE64 secret is configured.
-      # Secrets: KEYSTORE_BASE64 (base64 -w0 keystore.jks), KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD
-      - name: Decode keystore
-        id: keystore
-        env:
-          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
-        if: ${{ env.KEYSTORE_BASE64 != '' && github.event_name != 'pull_request' }}
-        run: |
-          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
-          echo "file=$RUNNER_TEMP/release.jks" >> "$GITHUB_OUTPUT"
-
-      - name: Build signed release APK
-        if: ${{ steps.keystore.outputs.file != '' }}
-        env:
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: |
-          ./gradlew assembleRelease \
-            -Pandroid.injected.signing.store.file="${{ steps.keystore.outputs.file }}" \
-            -Pandroid.injected.signing.store.password="$KEYSTORE_PASSWORD" \
-            -Pandroid.injected.signing.key.alias="$KEY_ALIAS" \
-            -Pandroid.injected.signing.key.password="$KEY_PASSWORD"
-
-      - name: Upload release APK
-        if: ${{ steps.keystore.outputs.file != '' }}
-        uses: actions/upload-artifact@v5
-        with:
-          name: tuner-release-apk
-          path: app/build/outputs/apk/release/*.apk
-          if-no-files-found: error
-
-      - name: Publish GitHub release (tags v*)
-        if: ${{ startsWith(github.ref, 'refs/tags/v') && steps.keystore.outputs.file != '' }}
-        uses: softprops/action-gh-release@v2
-        with:
-          files: app/build/outputs/apk/release/*.apk
-          generate_release_notes: true
+      # Unsigned, only to catch release-only problems (R8 shrinking) before tagging a release.
+      - name: Build release APK (unsigned check)
+        run: ./gradlew assembleRelease
