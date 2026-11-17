@@ -331,18 +331,20 @@ private fun HeaderRow(
                     .size(20.dp)
             )
         }
-        TooltipBox(
-            positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Below),
-            tooltip = { PlainTooltip { Text(settingsLabel) } },
-            state = rememberTooltipState(),
-            modifier = Modifier.align(Alignment.CenterEnd)
-        ) {
-            IconButton(onClick = onSettingsClick) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_settings),
-                    contentDescription = settingsLabel,
-                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                )
+        // TooltipBox ignores an align modifier, so a plain Box carries the alignment.
+        Box(modifier = Modifier.align(Alignment.CenterEnd)) {
+            TooltipBox(
+                positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Below),
+                tooltip = { PlainTooltip { Text(settingsLabel) } },
+                state = rememberTooltipState()
+            ) {
+                IconButton(onClick = onSettingsClick) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_settings),
+                        contentDescription = settingsLabel,
+                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    )
+                }
             }
         }
     }
